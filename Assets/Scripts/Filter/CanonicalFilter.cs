@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-using UnityEngine.UI;
 
 enum FilterType
 {
@@ -49,63 +48,64 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
     {
         history ??= new float[2 * channels];
 
-        float local_freq = Volatile.Read(ref frequency);
-        float local_q = Volatile.Read(ref q);
-        float k = Mathf.Tan(Mathf.PI * local_freq / samplingRate);
+        var localType = filterType;
+        float localFreq = Mathf.Min(Volatile.Read(ref frequency), 0.499f * samplingRate);
+        float localQ = Volatile.Read(ref q);
+        float k = Mathf.Tan(Mathf.PI * localFreq / samplingRate);
 
-        float coeff_2nd_denom = k * k * local_q + k + q;
+        float coeff_2nd_denom = k * k * localQ + k + q;
 
-        a1 = filterType switch
+        a1 = localType switch
         {
             FilterType.FirstOrderLowpass => (k - 1) / (k + 1),
             FilterType.FirstOrderHighpass => (k - 1) / (k + 1),
             FilterType.FirstOrderAllpass => (k - 1) / (k + 1),
-            _ => (2 * local_q * (k * k - 1)) / coeff_2nd_denom
+            _ => (2 * localQ * (k * k - 1)) / coeff_2nd_denom
         };
 
-        a2 = filterType switch
+        a2 = localType switch
         {
             FilterType.FirstOrderLowpass => 0,
             FilterType.FirstOrderHighpass => 0,
             FilterType.FirstOrderAllpass => 0,
-            _ => (k * k * local_q - k + q) / coeff_2nd_denom
+            _ => (k * k * localQ - k + localQ) / coeff_2nd_denom
         };
 
-        b0 = filterType switch
+        b0 = localType switch
         {
             FilterType.FirstOrderLowpass => k / (k + 1),
             FilterType.FirstOrderHighpass => 1 / (k + 1),
             FilterType.FirstOrderAllpass => (k - 1) / (k + 1),
-            FilterType.SecondOrderLowpass => (k * k * local_q) / coeff_2nd_denom,
-            FilterType.SecondOrderHighpass => (local_q) / coeff_2nd_denom,
+            FilterType.SecondOrderLowpass => (k * k * localQ) / coeff_2nd_denom,
+            FilterType.SecondOrderHighpass => (localQ) / coeff_2nd_denom,
             FilterType.SecondOrderBandpass => (k) / coeff_2nd_denom,
-            FilterType.SecondOrderBandreject => (local_q * (1 + k * k)) / coeff_2nd_denom,
-            FilterType.SecondOrderAllpass => (k * k * local_q - k + q) / coeff_2nd_denom,
+            FilterType.SecondOrderBandreject => (localQ * (1 + k * k)) / coeff_2nd_denom,
+            FilterType.SecondOrderAllpass => (k * k * localQ - k + localQ) / coeff_2nd_denom,
             _ => throw new ArgumentException()
         };
 
-        b1 = filterType switch
+        b1 = localType switch
         {
             FilterType.FirstOrderLowpass => k / (k + 1),
             FilterType.FirstOrderHighpass => -1 / (k + 1),
             FilterType.FirstOrderAllpass => 1,
-            FilterType.SecondOrderLowpass => (2 * k * k * local_q) / coeff_2nd_denom,
-            FilterType.SecondOrderHighpass => -(2 * local_q) / coeff_2nd_denom,
+            FilterType.SecondOrderLowpass => (2 * k * k * localQ) / coeff_2nd_denom,
+            FilterType.SecondOrderHighpass => -(2 * localQ) / coeff_2nd_denom,
             FilterType.SecondOrderBandpass => 0,
-            FilterType.SecondOrderBandreject => (2 * local_q * (k * k - 1)) / coeff_2nd_denom,
-            FilterType.SecondOrderAllpass => (2 * local_q * (k * k - 1)) / coeff_2nd_denom,
+            FilterType.SecondOrderBandreject => (2 * localQ * (k * k - 1)) / coeff_2nd_denom,
+            FilterType.SecondOrderAllpass => (2 * localQ * (k * k - 1)) / coeff_2nd_denom,
             _ => throw new ArgumentException()
         };
 
-        b2 = filterType switch
+        b2 = localType switch
         {
             FilterType.FirstOrderLowpass => 0,
             FilterType.FirstOrderHighpass => 0,
             FilterType.FirstOrderAllpass => 0,
-            FilterType.SecondOrderLowpass => (k * k * local_q) / coeff_2nd_denom,
-            FilterType.SecondOrderHighpass => (local_q) / coeff_2nd_denom,
+            FilterType.SecondOrderLowpass => (k * k * localQ) / coeff_2nd_denom,
+            FilterType.SecondOrderHighpass => (localQ) / coeff_2nd_denom,
             FilterType.SecondOrderBandpass => -(k) / coeff_2nd_denom,
-            FilterType.SecondOrderBandreject => (local_q * (1 + k * k)) / coeff_2nd_denom,
+            FilterType.SecondOrderBandreject => (localQ * (1 + k * k)) / coeff_2nd_denom,
             FilterType.SecondOrderAllpass => 1,
             _ => throw new ArgumentException()
         };
@@ -114,9 +114,9 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
         {
             for (var ch = 0; ch < channels; ch++)
             {
-                float temp = data[i + ch] - a1 * history[ch] - a2 * history[2 + ch];
-                data[i + ch] = b0 * temp + b1 * history[ch] + b2 * history[2 + ch];
-                history[2 + ch] = history[ch];
+                float temp = data[i + ch] - a1 * history[ch] - a2 * history[channels + ch];
+                data[i + ch] = b0 * temp + b1 * history[ch] + b2 * history[channels + ch];
+                history[channels + ch] = history[ch];
                 history[ch] = temp;
             }
         }
