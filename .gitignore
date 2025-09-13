@@ -1,0 +1,69 @@
+# Unity
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+MemoryCaptures/
+UserSettings/
+
+# Crash/Profiler
+*.stacktrace
+*.dmp
+ProfileTrace*
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.sln
+*.csproj
+*.csproj.user
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.unityproj
+*.booproj
+*.svd
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+._*
+
+# Gradle / Android / Xcode exports
+.gradle/
+gradle/
+ExportedObj/
+*.apk
+*.aab
+*.ipa
+*.xcworkspace/
+*.xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Misc build artifacts
+*.unitypackage
+*.obj
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Rider/JetBrains caches
+.idea/
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# Keep essential Unity folders tracked
+!Assets/
+!Packages/
+!ProjectSettings/
+
