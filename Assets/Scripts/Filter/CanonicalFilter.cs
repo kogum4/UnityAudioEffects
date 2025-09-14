@@ -17,6 +17,8 @@ enum FilterType
 
 }
 
+public record BiquadCoeffs(float B0, float B1, float B2, float A1, float A2);
+
 public class CanonicalFilter : MonoBehaviour, IAudioEffect
 {
     [SerializeField]
@@ -32,11 +34,13 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
 
     private float samplingRate;
     private float[] history;
-    private float a1;
-    private float a2;
-    private float b0;
-    private float b1;
-    private float b2;
+    
+    private BiquadCoeffs _coeffs = new BiquadCoeffs(1, 0, 0, 0, 0);
+    public BiquadCoeffs Coeffs => Volatile.Read(ref _coeffs);
+    public void publishCoeffs(float b0, float b1, float b2, float a1, float a2)
+    {
+        Volatile.Write(ref _coeffs, new BiquadCoeffs(b0, b1, b2, a1, a2));
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -55,7 +59,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
 
         float coeff_2nd_denom = k * k * localQ + k + q;
 
-        a1 = localType switch
+        float a1 = localType switch
         {
             FilterType.FirstOrderLowpass => (k - 1) / (k + 1),
             FilterType.FirstOrderHighpass => (k - 1) / (k + 1),
@@ -63,7 +67,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             _ => (2 * localQ * (k * k - 1)) / coeff_2nd_denom
         };
 
-        a2 = localType switch
+        float a2 = localType switch
         {
             FilterType.FirstOrderLowpass => 0,
             FilterType.FirstOrderHighpass => 0,
@@ -71,7 +75,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             _ => (k * k * localQ - k + localQ) / coeff_2nd_denom
         };
 
-        b0 = localType switch
+        float b0 = localType switch
         {
             FilterType.FirstOrderLowpass => k / (k + 1),
             FilterType.FirstOrderHighpass => 1 / (k + 1),
@@ -84,7 +88,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             _ => throw new ArgumentException()
         };
 
-        b1 = localType switch
+        float b1 = localType switch
         {
             FilterType.FirstOrderLowpass => k / (k + 1),
             FilterType.FirstOrderHighpass => -1 / (k + 1),
@@ -97,7 +101,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             _ => throw new ArgumentException()
         };
 
-        b2 = localType switch
+        float b2 = localType switch
         {
             FilterType.FirstOrderLowpass => 0,
             FilterType.FirstOrderHighpass => 0,
@@ -109,6 +113,8 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             FilterType.SecondOrderAllpass => 1,
             _ => throw new ArgumentException()
         };
+
+        publishCoeffs(b0, b1, b2, a1, a2);
 
         for (var i = 0; i < data.Length; i = i + channels)
         {
