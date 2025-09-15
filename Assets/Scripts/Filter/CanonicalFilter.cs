@@ -37,9 +37,12 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
     
     private BiquadCoeffs _coeffs = new BiquadCoeffs(1, 0, 0, 0, 0);
     public BiquadCoeffs Coeffs => Volatile.Read(ref _coeffs);
-    public void publishCoeffs(float b0, float b1, float b2, float a1, float a2)
+    private int _version = 0;
+    public int Version => Volatile.Read(ref _version);
+    public void PublishCoeffs(float b0, float b1, float b2, float a1, float a2)
     {
         Volatile.Write(ref _coeffs, new BiquadCoeffs(b0, b1, b2, a1, a2));
+        Interlocked.Increment(ref _version);
     }
 
     // Start is called before the first frame update
@@ -57,7 +60,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
         float localQ = Volatile.Read(ref q);
         float k = Mathf.Tan(Mathf.PI * localFreq / samplingRate);
 
-        float coeff_2nd_denom = k * k * localQ + k + q;
+        float coeff_2nd_denom = k * k * localQ + k + localQ;
 
         float a1 = localType switch
         {
@@ -114,7 +117,7 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             _ => throw new ArgumentException()
         };
 
-        publishCoeffs(b0, b1, b2, a1, a2);
+        PublishCoeffs(b0, b1, b2, a1, a2);
 
         for (var i = 0; i < data.Length; i = i + channels)
         {

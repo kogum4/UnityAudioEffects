@@ -13,6 +13,7 @@ public class CanonicalFilterGraph : MonoBehaviour
 
     private LineRenderer lineRenderer;
     private BiquadCoeffs biquadCoeffs;
+    private int version;
 
     // Start is called before the first frame update
     void Start()
@@ -23,7 +24,11 @@ public class CanonicalFilterGraph : MonoBehaviour
     void Update()
     {
         biquadCoeffs = canonicalFilter.Coeffs;
-        DrawFunction();
+        if (version != canonicalFilter.Version)
+        {
+            DrawFunction();
+        }
+        version = canonicalFilter.Version;
     }
 
     void DrawFunction()
