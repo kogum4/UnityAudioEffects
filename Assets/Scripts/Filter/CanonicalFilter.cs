@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using Assets.Scripts.Misc;
 using UnityEngine;
 
 enum FilterType
@@ -39,9 +40,9 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
     public BiquadCoeffs Coeffs => Volatile.Read(ref _coeffs);
     private int _version = 0;
     public int Version => Volatile.Read(ref _version);
-    public void PublishCoeffs(float b0, float b1, float b2, float a1, float a2)
+    public void PublishCoeffs(BiquadCoeffs newCoeffs)
     {
-        Volatile.Write(ref _coeffs, new BiquadCoeffs(b0, b1, b2, a1, a2));
+        Volatile.Write(ref _coeffs, newCoeffs);
         Interlocked.Increment(ref _version);
     }
 
@@ -116,19 +117,25 @@ public class CanonicalFilter : MonoBehaviour, IAudioEffect
             FilterType.SecondOrderAllpass => 1,
             _ => throw new ArgumentException()
         };
+        
+        if (!Misc.NearlyEqual(Coeffs.A1, a1) || !Misc.NearlyEqual(Coeffs.A2, a2) ||
+            !Misc.NearlyEqual(Coeffs.B0, b0) || !Misc.NearlyEqual(Coeffs.B1, b1) ||
+            !Misc.NearlyEqual(Coeffs.B2, b2))
+        {
+            PublishCoeffs(new BiquadCoeffs(b0, b1, b2, a1, a2));
+        }
 
-        PublishCoeffs(b0, b1, b2, a1, a2);
 
         for (var i = 0; i < data.Length; i = i + channels)
-        {
-            for (var ch = 0; ch < channels; ch++)
             {
-                float temp = data[i + ch] - a1 * history[ch] - a2 * history[channels + ch];
-                data[i + ch] = b0 * temp + b1 * history[ch] + b2 * history[channels + ch];
-                history[channels + ch] = history[ch];
-                history[ch] = temp;
+                for (var ch = 0; ch < channels; ch++)
+                {
+                    float temp = data[i + ch] - a1 * history[ch] - a2 * history[channels + ch];
+                    data[i + ch] = b0 * temp + b1 * history[ch] + b2 * history[channels + ch];
+                    history[channels + ch] = history[ch];
+                    history[ch] = temp;
+                }
             }
-        }
 
     }
 }
